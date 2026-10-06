@@ -1,0 +1,20 @@
+# Build artifacts
+build/
+.lock-waf_linux_build
+
+# Pebble SDK
+pebble-js-app.js
+pebble-js-app.js.map
+
+# Node
+node_modules/
+npm-debug.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editors
+.idea/
+.vscode/
+*.swp
