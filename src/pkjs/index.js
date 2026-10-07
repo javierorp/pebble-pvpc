@@ -6,15 +6,15 @@ var ZONAS = ["peninsular", "canarias", "baleares", "ceuta", "melilla"];
 var JS_READY = 2;
 var SIN_DATO = 2147483647;
 var KEY = {
-  REQ: 10000,
-  PRICES: 10001,
-  HORA: 10002,
-  MINH: 10003,
-  MAXH: 10004,
-  ERR: 10005,
-  GEO: 10006,
-  UNIDAD: 10007,
-  IDIOMA: 10008
+  REQ: "REQ",
+  PRICES: "PRICES",
+  HORA: "HORA",
+  MINH: "MINH",
+  MAXH: "MAXH",
+  ERR: "ERR",
+  GEO: "GEO",
+  UNIDAD: "UNIDAD",
+  IDIOMA: "IDIOMA"
 };
 var CLAVE_AJUSTES = "pvpc_ajustes";
 
@@ -122,7 +122,7 @@ function paginaConfig(a) {
     "</form>" +
     "<script>" +
     "var qs=new URLSearchParams(location.search);" +
-    "var rt=qs.get('return_to')||'pebble://event/webviewclosed';" +
+    "var rt=qs.get('return_to')||'pebblejs://close#';" +
     "document.querySelector('form').addEventListener('submit',function(ev){ev.preventDefault();var d=new FormData(ev.target);var s={zona:parseInt(d.get('zona'),10),unidad:parseInt(d.get('unidad'),10),idioma:parseInt(d.get('idioma'),10)};location.href=rt+encodeURIComponent(JSON.stringify(s));});" +
     "</script></body></html>"
   );
@@ -191,7 +191,11 @@ Pebble.addEventListener("webviewclosed", function (e) {
     return;
   }
   try {
-    var ajustes = JSON.parse(decodeURIComponent(e.response));
+    var raw = e.response;
+    if (raw.charAt(0) !== "{") {
+      raw = decodeURIComponent(raw);
+    }
+    var ajustes = JSON.parse(raw);
     ajustes.zona = ajustes.zona | 0;
     ajustes.unidad = ajustes.unidad | 0;
     ajustes.idioma = ajustes.idioma | 0;
