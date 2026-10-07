@@ -4,16 +4,17 @@
 #define JS_READY 2
 #define PERSIST_GEO 1
 #define PERSIST_UNIDAD 2
+#define PERSIST_IDIOMA 3
 #define NUM_ZONAS 5
 #define NUM_PRECIOS 48
 #define SIN_DATO 2147483647
 
-static const char *ZONA_NOMBRES[NUM_ZONAS] = {
-    "Península",
-    "Canarias",
-    "Baleares",
-    "Ceuta",
-    "Melilla"};
+static const char *ZONA_NOMBRES[NUM_ZONAS][2] = {
+    {"Península", "Peninsula"},
+    {"Canarias", "Canaries"},
+    {"Baleares", "Balearics"},
+    {"Ceuta", "Ceuta"},
+    {"Melilla", "Melilla"}};
 
 static Window *s_main_window;
 static MenuLayer *s_menu;
@@ -21,6 +22,7 @@ static AppTimer *s_retry_timer;
 
 static int s_geo;
 static int s_unidad;
+static int s_idioma;
 static bool s_js_ready;
 static bool s_tiene_datos;
 static int s_hora_actual;
@@ -41,6 +43,11 @@ static char s_header_buf[48];
 static char s_title_buf[40];
 static char s_sub_buf[48];
 
+static const char *TXT(const char *es, const char *en)
+{
+  return s_idioma == 1 ? en : es;
+}
+
 static void poner_header(const char *text)
 {
   snprintf(s_header_buf, sizeof(s_header_buf), "%s", text);
@@ -52,7 +59,7 @@ static void poner_header(const char *text)
 
 static void mostrar_zona(void)
 {
-  snprintf(s_header_buf, sizeof(s_header_buf), "PVPC - %s", ZONA_NOMBRES[s_geo]);
+  snprintf(s_header_buf, sizeof(s_header_buf), "PVPC - %s", ZONA_NOMBRES[s_geo][s_idioma]);
   if (s_menu)
   {
     menu_layer_reload_data(s_menu);
@@ -85,7 +92,7 @@ static void pedir_precios(void)
   AppMessageResult res = app_message_outbox_begin(&iter);
   if (res != APP_MSG_OK)
   {
-    poner_header("Sin conexión con el móvil");
+    poner_header(TXT("Sin conexión con el móvil", "No phone connection"));
     return;
   }
   dict_write_int32(iter, MESSAGE_KEY_REQ, 1);
@@ -93,10 +100,10 @@ static void pedir_precios(void)
   res = app_message_outbox_send();
   if (res != APP_MSG_OK)
   {
-    poner_header("Sin conexión con el móvil");
+    poner_header(TXT("Sin conexión con el móvil", "No phone connection"));
     return;
   }
-  poner_header("Actualizando...");
+  poner_header(TXT("Actualizando...", "Updating..."));
 }
 
 static void enviar_ajustes_a_js(void)
@@ -108,6 +115,7 @@ static void enviar_ajustes_a_js(void)
   }
   dict_write_int32(iter, MESSAGE_KEY_GEO, (int32_t)s_geo);
   dict_write_int32(iter, MESSAGE_KEY_UNIDAD, (int32_t)s_unidad);
+  dict_write_int32(iter, MESSAGE_KEY_IDIOMA, (int32_t)s_idioma);
   app_message_outbox_send();
 }
 
@@ -228,6 +236,18 @@ static void inbox_recibido(DictionaryIterator *iter, void *context)
     return;
   }
 
+  t = dict_find(iter, MESSAGE_KEY_IDIOMA);
+  if (t)
+  {
+    int idioma = (int)t->value->int32;
+    if (idioma == 0 || idioma == 1)
+    {
+      s_idioma = idioma;
+      persist_write_int(PERSIST_IDIOMA, s_idioma);
+      mostrar_zona();
+    }
+  }
+
   t = dict_find(iter, MESSAGE_KEY_GEO);
   if (t)
   {
@@ -259,7 +279,7 @@ static void inbox_recibido(DictionaryIterator *iter, void *context)
 
 static void outbox_fallado(DictionaryIterator *iterator, AppMessageResult reason, void *context)
 {
-  poner_header("Sin conexión con el móvil");
+  poner_header(TXT("Sin conexión con el móvil", "No phone connection"));
 }
 
 static void reintento_cb(void *context)
@@ -282,12 +302,12 @@ static void prv_menu_draw_row(GContext *ctx, const Layer *cell_layer, MenuIndex 
   bool es_max = s_tiene_datos && !manana && h == s_hora_max;
 
   snprintf(s_title_buf, sizeof(s_title_buf), "%s%s%02d:00 - %02d:00%s%s",
-           manana ? "Mañana " : "", es_actual ? "→ " : "", hh, (hh + 1) % 24,
-           es_min ? " · mín" : "", es_max ? " · máx" : "");
+           manana ? TXT("Mañana ", "Tomorrow ") : "", es_actual ? "→ " : "", hh, (hh + 1) % 24,
+           es_min ? TXT(" · mín", " · min") : "", es_max ? TXT(" · máx", " · max") : "");
 
   if (!s_tiene_datos || s_precios[h] == SIN_DATO)
   {
-    snprintf(s_sub_buf, sizeof(s_sub_buf), "Sin dato");
+    snprintf(s_sub_buf, sizeof(s_sub_buf), "%s", TXT("Sin dato", "No data"));
   }
   else
   {
@@ -430,6 +450,11 @@ static void prv_init(void)
   if (s_unidad != 0 && s_unidad != 1)
   {
     s_unidad = 0;
+  }
+  s_idioma = persist_exists(PERSIST_IDIOMA) ? (int)persist_read_int(PERSIST_IDIOMA) : 0;
+  if (s_idioma != 0 && s_idioma != 1)
+  {
+    s_idioma = 0;
   }
 
   s_main_window = window_create();

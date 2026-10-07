@@ -32,7 +32,8 @@
       "MAXH",
       "ERR",
       "GEO",
-      "UNIDAD"
+      "UNIDAD",
+      "IDIOMA"
     ],
     "resources": {
       "media": [
