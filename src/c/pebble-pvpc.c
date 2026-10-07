@@ -292,6 +292,61 @@ static void reintento_cb(void *context)
   }
 }
 
+#ifdef PBL_ROUND
+static int16_t prv_semiancho_cuerda(const Layer *cell_layer, int16_t y_local, int16_t alto)
+{
+  GRect scr = layer_get_bounds(window_get_root_layer(s_main_window));
+  int16_t cx = scr.size.w / 2;
+  int16_t cy = scr.size.h / 2;
+  int32_t r2 = (int32_t)(cx - 4) * (cx - 4);
+  GPoint org = layer_convert_point_to_screen(cell_layer, GPointZero);
+  int32_t dy = (int32_t)org.y + y_local + alto / 2 - cy;
+  if (dy < 0)
+  {
+    dy = -dy;
+  }
+  int32_t objetivo = r2 - dy * dy;
+  if (objetivo <= 0)
+  {
+    return 0;
+  }
+  int32_t medio = 0;
+  while ((medio + 1) * (medio + 1) <= objetivo)
+  {
+    medio++;
+  }
+  return (int16_t)medio;
+}
+
+static void prv_dibujar_linea_arco(GContext *ctx, const Layer *cell_layer, const char *texto,
+                                   GFont fuente, int16_t y_local, int16_t alto, GColor color)
+{
+  int16_t medio = prv_semiancho_cuerda(cell_layer, y_local, alto);
+  GRect cell = layer_get_bounds(cell_layer);
+  GRect scr = layer_get_bounds(window_get_root_layer(s_main_window));
+  GPoint org = layer_convert_point_to_screen(cell_layer, GPointZero);
+  int16_t cx_local = scr.size.w / 2 - org.x;
+  int16_t izq = cx_local - medio;
+  int16_t der = cx_local + medio;
+  if (izq < 0)
+  {
+    izq = 0;
+  }
+  if (der > cell.size.w)
+  {
+    der = cell.size.w;
+  }
+  if (der <= izq)
+  {
+    return;
+  }
+  graphics_context_set_text_color(ctx, color);
+  graphics_draw_text(ctx, texto, fuente,
+                     GRect(izq, y_local, der - izq, alto),
+                     GTextOverflowModeTrailingEllipsis, GTextAlignmentCenter, NULL);
+}
+#endif
+
 static void prv_menu_draw_row(GContext *ctx, const Layer *cell_layer, MenuIndex *cell_index, void *data)
 {
   int h = (int)cell_index->row;
@@ -300,26 +355,43 @@ static void prv_menu_draw_row(GContext *ctx, const Layer *cell_layer, MenuIndex 
   bool es_actual = s_tiene_datos && !manana && h == s_hora_actual;
   bool es_min = s_tiene_datos && !manana && h == s_hora_min;
   bool es_max = s_tiene_datos && !manana && h == s_hora_max;
+  bool con_dato = s_tiene_datos && s_precios[h] != SIN_DATO;
 
-  snprintf(s_title_buf, sizeof(s_title_buf), "%s%s%02d:00 - %02d:00%s%s",
-           manana ? TXT("Mañana ", "Tomorrow ") : "", es_actual ? "→ " : "", hh, (hh + 1) % 24,
-           es_min ? TXT(" · mín", " · min") : "", es_max ? TXT(" · máx", " · max") : "");
-
-  if (!s_tiene_datos || s_precios[h] == SIN_DATO)
+  char precio[16];
+  if (con_dato)
   {
-    snprintf(s_sub_buf, sizeof(s_sub_buf), "%s", TXT("Sin dato", "No data"));
+    format_precio(precio, sizeof(precio), s_precios[h]);
+  }
+
+#ifdef PBL_ROUND
+  bool enfocada = menu_cell_layer_is_highlighted(cell_layer);
+  if (enfocada)
+  {
+    snprintf(s_title_buf, sizeof(s_title_buf), "%s%s%02d:00 - %02d:00%s%s",
+             manana ? TXT("Mañana ", "Tomorrow ") : "", es_actual ? "→ " : "", hh, (hh + 1) % 24,
+             es_min ? TXT(" · mín", " · min") : "", es_max ? TXT(" · máx", " · max") : "");
+    snprintf(s_sub_buf, sizeof(s_sub_buf), "%s %s",
+             con_dato ? precio : TXT("Sin dato", "No data"), unidad_texto());
   }
   else
   {
-    char precio[16];
-    format_precio(precio, sizeof(precio), s_precios[h]);
-    snprintf(s_sub_buf, sizeof(s_sub_buf), "%s %s", precio, unidad_texto());
+    snprintf(s_title_buf, sizeof(s_title_buf), "%s%s%02d:00 %s%s%s",
+             manana ? TXT("M ", "T ") : "", es_actual ? "→ " : "", hh,
+             con_dato ? precio : TXT("Sin dato", "No data"),
+             es_min ? TXT(" mín", " min") : "", es_max ? TXT(" máx", " max") : "");
   }
+#else
+  snprintf(s_title_buf, sizeof(s_title_buf), "%s%s%02d:00 - %02d:00%s%s",
+           manana ? TXT("Mañana ", "Tomorrow ") : "", es_actual ? "→ " : "", hh, (hh + 1) % 24,
+           es_min ? TXT(" · mín", " · min") : "", es_max ? TXT(" · máx", " · max") : "");
+  snprintf(s_sub_buf, sizeof(s_sub_buf), "%s %s",
+           con_dato ? precio : TXT("Sin dato", "No data"), unidad_texto());
+#endif
 
   GColor fg_hora = GColorBlack;
   GColor fg_precio = GColorBlack;
 #ifdef PBL_COLOR
-  if (!s_tiene_datos || s_precios[h] == SIN_DATO)
+  if (!con_dato)
   {
     fg_hora = GColorDarkGray;
     fg_precio = GColorDarkGray;
@@ -346,6 +418,20 @@ static void prv_menu_draw_row(GContext *ctx, const Layer *cell_layer, MenuIndex 
     fg_precio = GColorWhite;
   }
 
+#ifdef PBL_ROUND
+  if (enfocada)
+  {
+    prv_dibujar_linea_arco(ctx, cell_layer, s_title_buf, fonts_get_system_font(FONT_KEY_GOTHIC_14),
+                           12, 18, fg_hora);
+    prv_dibujar_linea_arco(ctx, cell_layer, s_sub_buf, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
+                           30, 26, fg_precio);
+  }
+  else
+  {
+    prv_dibujar_linea_arco(ctx, cell_layer, s_title_buf, fonts_get_system_font(FONT_KEY_GOTHIC_14),
+                           3, 18, fg_precio);
+  }
+#else
   GRect bounds = layer_get_bounds(cell_layer);
   int16_t alto = bounds.size.h;
   int16_t alto_hora = (alto * 4) / 10;
@@ -377,11 +463,18 @@ static void prv_menu_draw_row(GContext *ctx, const Layer *cell_layer, MenuIndex 
   graphics_draw_text(ctx, s_sub_buf, fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD),
                      GRect(x_texto, alto_hora, bounds.size.w - x_texto - 4, alto - alto_hora),
                      GTextOverflowModeTrailingEllipsis, GTextAlignmentLeft, NULL);
+#endif
 }
 
 static int16_t prv_menu_cell_height(MenuLayer *menu_layer, MenuIndex *cell_index, void *data)
 {
+#ifdef PBL_ROUND
+  return menu_layer_is_index_selected(menu_layer, cell_index)
+             ? MENU_CELL_ROUND_FOCUSED_SHORT_CELL_HEIGHT
+             : MENU_CELL_ROUND_UNFOCUSED_SHORT_CELL_HEIGHT;
+#else
   return 44;
+#endif
 }
 
 static uint16_t prv_menu_num_sections(MenuLayer *menu_layer, void *data)
