@@ -1,7 +1,12 @@
-# pebble-pvpc
+# Precio Luz PVPC
 
 App de Pebble para consultar el precio de la luz (PVPC) en España, escrita en C
 con el SDK de Pebble. Todo está en español.
+
+Disponible en la [tienda de Pebble](https://apps.repebble.com/6ac659d64ccfa70009b00593)
+y en [Rebble](https://apps.rebble.io/en_US/application/6ac659d64ccfa70009b00593).
+
+![Banner](store/banner.png)
 
 ## Qué muestra
 
@@ -34,7 +39,7 @@ de Pebble (Rebble).
 
 Los precios se obtienen del endpoint público de **Red Eléctrica** (apidatos):
 
-```
+```sh
 https://apidatos.ree.es/es/datos/mercados/precios-mercados-tiempo-real
     ?start_date=AAAA-MM-DDT00:00
     &end_date=AAAA-MM-DDT23:59
@@ -55,15 +60,15 @@ Notas:
 
 ## Plataformas
 
-| Plataforma | Dispositivo                    | Generación     | Resolución | Pantalla      |
-|------------|--------------------------------|----------------|------------|---------------|
-| aplite     | Pebble / Pebble Steel          | Pebble clásico | 144×168    | b/n           |
-| basalt     | Pebble Time                    | Pebble clásico | 144×168    | color         |
-| chalk      | Pebble Time Round              | Pebble clásico | 180×180    | color redonda |
-| diorite    | Pebble 2 / Pebble 2 SE         | Pebble clásico | 144×168    | b/n           |
-| flint      | Core 2 Duo (Pebble 2 Duo)      | Core Devices   | 144×168    | b/n           |
-| gabbro     | Core Round 2 (Pebble Round 2)  | Core Devices   | 260×260    | color redonda |
-| emery      | Core Time 2 (Pebble Time 2)    | Core Devices   | 200×228    | color         |
+| Plataforma | Dispositivo                   | Generación     | Resolución | Pantalla      |
+| ---------- | ----------------------------- | -------------- | ---------- | ------------- |
+| aplite     | Pebble / Pebble Steel         | Pebble clásico | 144×168    | b/n           |
+| basalt     | Pebble Time                   | Pebble clásico | 144×168    | color         |
+| chalk      | Pebble Time Round             | Pebble clásico | 180×180    | color redonda |
+| diorite    | Pebble 2 / Pebble 2 SE        | Pebble clásico | 144×168    | b/n           |
+| flint      | Core 2 Duo (Pebble 2 Duo)     | Core Devices   | 144×168    | b/n           |
+| gabbro     | Core Round 2 (Pebble Round 2) | Core Devices   | 260×260    | color redonda |
+| emery      | Core Time 2 (Pebble Time 2)   | Core Devices   | 200×228    | color         |
 
 Las plataformas b/n (aplite, diorite, flint) usan iconos ▼/◇/▲ en lugar de
 colores y un icono de menú propio en blanco y negro.
@@ -73,12 +78,11 @@ colores y un icono de menú propio en blanco y negro.
 ```sh
 pebble build                          # compila para todas las plataformas
 pebble install --emulator emery       # instala en el emulador
-pebble install --phone <ip>           # instala en un reloj real (misma red)
 ```
 
 ## Estructura del proyecto
 
-```
+```sh
 src/c/pebble-pvpc.c    Interfaz del reloj (lista, categorías, iconos)
 src/pkjs/index.js      PebbleKit JS: peticiones a la API y página de ajustes
 resources/images/      Icono de menú (color y b/n) e icono para la tienda
