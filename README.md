@@ -1,5 +1,7 @@
 # Precio Luz PVPC
 
+[![Built with NaN](https://nan.builders/badge/built-with-nan-compact.svg)](https://nan.builders/?ref=built-with-nan)
+
 App de Pebble para consultar el precio de la luz (PVPC) en España, escrita en C
 con el SDK de Pebble. Todo está en español.
 
